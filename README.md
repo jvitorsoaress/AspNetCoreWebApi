@@ -5,7 +5,7 @@
 ### Description
 This repo was created for practicing based on the original documentation and save whatever I've learned here.
 
-Feel free to reach out if you see something wrong or else here.
+Feel free to reach out if you see something wrong or else.
 
 ### Getting Started
 
