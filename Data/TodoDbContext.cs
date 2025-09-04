@@ -10,5 +10,5 @@ public class TodoDbContext : DbContext
     {
     }
 
-    public DbSet<TodoItem> TodoItems { get; set; } = null!;
+    public DbSet<TodoItem> TodoItem { get; set; } = default!;
 }
