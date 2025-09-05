@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using AspNetCoreWebApi.Models;
 using AspNetCoreWebApi.Data;
+using AspNetCoreWebApi.Dtos;
 
 namespace AspNetCoreWebApi.Controllers
 {
@@ -21,53 +22,60 @@ namespace AspNetCoreWebApi.Controllers
             _context = context;
         }
 
+        private bool TodoItemExists(long id)
+        {
+            return _context.TodoItem.Any(e => e.Id == id);
+        }
+
+        private static TodoItemDto ItemToDTO(TodoItem todoItem) =>
+        new TodoItemDto
+        {
+            Id = todoItem.Id,
+            Name = todoItem.Name,
+            IsComplete = todoItem.IsComplete
+        };
+
         // GET: api/TodoItems
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<TodoItem>>> GetTodoItem()
+        public async Task<ActionResult<IEnumerable<TodoItemDto>>> GetTodoItem()
         {
-            return await _context.TodoItem.ToListAsync();
+            return await _context.TodoItem.Select(x => ItemToDTO(x)).ToListAsync();
         }
 
         // GET: api/TodoItems/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<TodoItem>> GetTodoItem(long id)
+        public async Task<ActionResult<TodoItemDto>> GetTodoItem(long id)
         {
             var todoItem = await _context.TodoItem.FindAsync(id);
 
             if (todoItem == null)
-            {
                 return NotFound();
-            }
 
-            return todoItem;
+            return ItemToDTO(todoItem);
         }
 
         // PUT: api/TodoItems/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutTodoItem(long id, TodoItem todoItem)
+        public async Task<IActionResult> PutTodoItem(long id, TodoItemDto todoItemDto)
         {
-            if (id != todoItem.Id)
-            {
+            if (id != todoItemDto.Id)
                 return BadRequest();
-            }
 
-            _context.Entry(todoItem).State = EntityState.Modified;
+            var todoItem = await _context.TodoItem.FindAsync(id);
+            if (todoItem == null)
+                return NotFound();
+
+            todoItem.Name = todoItemDto.Name;
+            todoItem.IsComplete = todoItemDto.IsComplete;
 
             try
             {
                 await _context.SaveChangesAsync();
             }
-            catch (DbUpdateConcurrencyException)
+            catch (DbUpdateConcurrencyException) when (!TodoItemExists(id))
             {
-                if (!TodoItemExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                return NotFound();
             }
 
             return NoContent();
@@ -76,13 +84,19 @@ namespace AspNetCoreWebApi.Controllers
         // POST: api/TodoItems
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<TodoItem>> PostTodoItem(TodoItem todoItem)
+        public async Task<ActionResult<TodoItemDto>> PostTodoItem(TodoItemDto todoItemDto)
         {
+            var todoItem = new TodoItem
+            {
+                IsComplete = todoItemDto.IsComplete,
+                Name = todoItemDto.Name
+            };
+
             _context.TodoItem.Add(todoItem);
             await _context.SaveChangesAsync();
 
-            // return CreatedAtAction("GetTodoItem", new { id = todoItem.Id }, todoItem);
-            return CreatedAtAction(nameof(GetTodoItem), new { id = todoItem.Id }, todoItem);
+            return CreatedAtAction(nameof(GetTodoItem),
+                new { id = todoItem.Id }, ItemToDTO(todoItem));
         }
 
         // DELETE: api/TodoItems/5
@@ -91,19 +105,12 @@ namespace AspNetCoreWebApi.Controllers
         {
             var todoItem = await _context.TodoItem.FindAsync(id);
             if (todoItem == null)
-            {
                 return NotFound();
-            }
 
             _context.TodoItem.Remove(todoItem);
             await _context.SaveChangesAsync();
 
             return NoContent();
-        }
-
-        private bool TodoItemExists(long id)
-        {
-            return _context.TodoItem.Any(e => e.Id == id);
         }
     }
 }
